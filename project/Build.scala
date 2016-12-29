@@ -7,7 +7,7 @@ object BuildSettings {
   val scalaVersions = Seq("2.11.8", "2.10.6", "2.12.1")
   val buildSettings = Defaults.defaultSettings ++ Seq(
     organization := "com.yetu",
-    version := "0.1.5-SNAPSHOT",
+    version := sys.env.getOrElse("VERSION", "0.1.5-SNAPSHOT"),
     scalaVersion := scalaVersions.head,
     crossScalaVersions := scalaVersions,
     scalacOptions ++= Seq("-unchecked", "-deprecation", "-J-DbeanCompanion.debug=true"),
