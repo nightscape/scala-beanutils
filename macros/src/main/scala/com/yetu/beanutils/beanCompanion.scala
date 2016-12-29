@@ -76,14 +76,22 @@ class beanCompanionMacro(val c: whitebox.Context) {
        */
       def getDebugFlag(params: List[ Tree ]): Boolean = {
         val debugProperty = System.getProperty("beanCompanion.debug") == null;
-
-        val debugParam: Boolean = params.headOption match {
-          case Some(AssignOrNamedArg(Ident(name), Literal(Constant(true)))) if name.decoded == "debug" ⇒ true
-          case _ ⇒ false
-        }
+        val debugParam: Boolean = params.collectFirst {
+          case AssignOrNamedArg(Ident(name), Literal(Constant(true))) if name.decoded == "debug" ⇒ true
+        }.getOrElse(false)
 
         debugProperty || debugParam
       }
+
+    def getReaderMethods(params: List[ Tree ]): Option[Seq[String]] = {
+      params.collectFirst {
+        case AssignOrNamedArg(Ident(name), Apply(Ident(TermName("Array")), methodConsts)) if name.decoded == "readerMethods" ⇒
+          val names = methodConsts.map {
+            case Literal(Constant(name: String)) => name
+          }
+          Some(names)
+      }.getOrElse(None)
+    }
 
       /**
        * Create the apply method. It will receive all of the constructor parameters and return an object of the given Type
@@ -105,10 +113,10 @@ class beanCompanionMacro(val c: whitebox.Context) {
        * @param targetType
        * @return
        */
-      def generateUnapplyMethod(targetType: Type): Tree = {
+      def generateUnapplyMethod(targetType: Type, readerMethods: Option[Seq[String]]): Tree = {
         // Since javac usually strips out method names, we might not have them. For consistency we fall back on calling
         // all the accessors, in order
-        val unapplyBody = getAccessors(targetType).map(a ⇒ q"obj.$a()")
+        val unapplyBody = readerMethods.map(_.map(m => targetType.member(TermName(m)).asMethod)).getOrElse(getAccessors(targetType)).map(a ⇒ q"obj.$a()")
 
         q"def unapply(obj: $targetType) = Option((..$unapplyBody))"
       }
@@ -133,9 +141,10 @@ class beanCompanionMacro(val c: whitebox.Context) {
         val (targetType, params) = getTargetTypeAndParameters
 
         val debug = getDebugFlag(params)
+        val readerMethods = getReaderMethods(params)
 
         val apply = generateApplyMethod(targetType)
-        val unapply = generateUnapplyMethod(targetType)
+        val unapply = generateUnapplyMethod(targetType, readerMethods)
         val otherMethods = nonConstructorMethods(body)
 
         val objectBody = otherMethods :+ apply :+ unapply
@@ -162,6 +171,6 @@ object $objectName {
  * @tparam T The JavaBean class to generate the constructor/extractor from
  * @param debug Show the generated "companion" object
  */
-class beanCompanion[ T ](debug: Boolean = false) extends StaticAnnotation {
+class beanCompanion[ T ](debug: Boolean = false, readerMethods: Array[String] = null) extends StaticAnnotation {
   def macroTransform(annottees: Any*) = macro beanCompanionMacro.impl
 }

@@ -67,6 +67,23 @@ b match {
 }
 ```
 
+If you only want to extract a specific subset of values, you can manually specify the `readerMethods` that should be used
+(in the order in which they will be pattern matched):
+
+```scala
+@beanCompanion[SimpleBean](readerMethods = Array("getName")) SimpleCompanion
+```
+
+You can then do the following:
+
+```scala
+val b = SimpleCompanion("foo", 42)
+
+b match {
+  case SimpleCompanion(name) => println(s"$name")
+}
+```
+
 You can also add methods and values to the "companion", as long as they are not named "unapply" or "apply" :) For a
 slightly larger example, look in the `examples/` subproject.
 
@@ -82,7 +99,7 @@ Scala when dealing with Java classes (so it's not a *REAL* companion)
 
 * The accessors and the constructor parameters have to have the same names. That is, if a constructor parameter is
 named `value`, there must be a corresponding `getValue()` method. There have to be accessors for all of the constructor
-parameters.
+parameters. If this is not an option for you, try specifying the `readerMethods` manually.
 
 * If the JavaBean has multiple constructors, `@beanCompanion` will pick the one with the most parameters.
 
