@@ -45,7 +45,6 @@ object ScalaBeanUtilsBuild extends Build {
         macroParadise
       ),
       resolvers += Resolver.sonatypeRepo("releases"),
-      publishMavenStyle := false,
       publishArtifact in (Compile, packageBin) := true,
       publishArtifact in (Test, packageBin) := false,
       publishArtifact in (Compile, packageDoc) := true,
